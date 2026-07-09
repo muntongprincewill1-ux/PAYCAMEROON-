@@ -10,6 +10,42 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
+import dns from 'dns';
+import util from 'util';
+const resolveSrv = util.promisify(dns.resolveSrv);
+const resolveTxt = util.promisify(dns.resolveTxt);
+
+async function resolveMongoSRV(uri) {
+  if (!uri.startsWith('mongodb+srv://')) return uri;
+  try {
+    const url = new URL(uri);
+    const hostname = url.hostname;
+    const srvRecords = await resolveSrv('_mongodb._tcp.' + hostname);
+    const txtRecords = await resolveTxt(hostname);
+    
+    if (!srvRecords || srvRecords.length === 0) return uri;
+    
+    const hosts = srvRecords.map(r => `${r.name}:${r.port}`).join(',');
+    const txtOptions = txtRecords.flat().join('&');
+    
+    let newUri = `mongodb://${url.username}:${url.password}@${hosts}${url.pathname}`;
+    
+    const searchParams = new URLSearchParams(url.search);
+    searchParams.set('ssl', 'true');
+    const txtParams = new URLSearchParams(txtOptions);
+    for (const [key, value] of txtParams) {
+      searchParams.set(key, value);
+    }
+    
+    newUri += '?' + searchParams.toString();
+    console.log("Resolved SRV to standard MongoDB URI");
+    return newUri;
+  } catch (err) {
+    console.error("Failed to resolve SRV manually, falling back to original URI:", err);
+    return uri;
+  }
+}
+
 
 dotenv.config({ override: true });
 
@@ -3907,8 +3943,11 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 async function startServer() {
   if (MONGODB_URI) {
     try {
-      await mongoose.connect(MONGODB_URI, { 
-        serverSelectionTimeoutMS: 10000, // Increased timeout for SRV
+      const resolvedUri = await resolveMongoSRV(MONGODB_URI);
+      await mongoose.connect(resolvedUri, { 
+        serverSelectionTimeoutMS: 30000, 
+        connectTimeoutMS: 30000,
+        socketTimeoutMS: 45000,
         dbName: 'paycam'
       });
       console.log("Connected to MongoDB");
