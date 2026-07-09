@@ -1,0 +1,10 @@
+MongoServerError: E11000 duplicate key error collection: test.users index: email_1 dup key: { email: null }
+MongoServerError: E11000 duplicate key error collection: test.users index: email_1 dup key: { email: null }
+    at InsertOneOperation.handleOk (/app/applet/node_modules/mongoose/node_modules/mongodb/src/operations/insert.ts:79:13)
+    at tryOperation (/app/applet/node_modules/mongoose/node_modules/mongodb/src/operations/execute_operation.ts:295:26)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async executeOperation (/app/applet/node_modules/mongoose/node_modules/mongodb/src/operations/execute_operation.ts:123:12)
+    at async Collection.insertOne (/app/applet/node_modules/mongoose/node_modules/mongodb/src/collection.ts:294:12)
+    at async model.$__save (/app/applet/node_modules/mongoose/lib/model.js:425:16)
+    at async model.save (/app/applet/node_modules/mongoose/lib/model.js:664:5)
+    at async <anonymous> (/app/applet/server.ts:118:5)

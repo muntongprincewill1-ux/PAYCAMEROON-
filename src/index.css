@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@variant dark (&:is(.dark *));
+
+@theme {
+  --color-primary: #4242F6;
+  --color-secondary: #F9BF17;
+  --color-background: #FFFFFF;
+  --color-dark: #0C0474;
+  --color-gray-light: #F3F4F6;
+  --color-gray-dark: #4B5563;
+}
+
+body {
+  background-color: var(--color-gray-light);
+  color: var(--color-dark);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Mobile App Container Simulation */
+.app-container {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background-color: var(--color-background);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.content-area {
+  padding-bottom: 80px; /* Space for bottom nav */
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
