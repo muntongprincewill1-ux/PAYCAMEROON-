@@ -52,18 +52,7 @@ if (MONGODB_URI && MONGODB_URI.includes('/?')) {
   MONGODB_URI = MONGODB_URI.replace('/?', '/paycam?');
 }
 console.log("MONGODB_URI:", MONGODB_URI);
-let useMockDb = !MONGODB_URI;
-
-if (MONGODB_URI) {
-  mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 3000 })
-    .then(() => console.log("Connected to MongoDB"))
-    .catch((err) => {
-      console.error("MongoDB connection error. Falling back to in-memory mock database.", err.message);
-      useMockDb = true;
-    });
-} else {
-  console.log("No MONGODB_URI provided. Using in-memory mock database.");
-}
+let useMockDb = true; // Set to true initially, will switch to false if MongoDB connects successfully
 
 // --- Mongoose Models ---
 const userSchema = new mongoose.Schema({
@@ -211,7 +200,7 @@ let mockAgentLogs: any[] = [
 ];
 
 // Automated Threat Detection Agent Simulation
-setInterval(async () => {
+let aiInterval = setInterval(async () => {
     const actions = [
        "Scanning incoming transactions in real-time...",
        "Running ML clustering on transaction nodes...",
@@ -3918,6 +3907,18 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 // Vite middleware for development
 async function startServer() {
+  if (MONGODB_URI) {
+    try {
+      await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
+      console.log("Connected to MongoDB");
+      useMockDb = false;
+    } catch (err) {
+      console.error("MongoDB connection error. Falling back to in-memory mock database.", err.message);
+      useMockDb = true;
+    }
+  } else {
+    console.log("No MONGODB_URI provided. Using in-memory mock database.");
+  }
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
