@@ -3,6 +3,7 @@ import "express-async-errors";
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import mongoose from "mongoose";
+mongoose.set("bufferCommands", false);
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
