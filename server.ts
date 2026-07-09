@@ -48,11 +48,8 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY?.trim() });
 
 // --- Database Setup ---
-let MONGODB_URI = process.env.MONGODB_URI;
-if (MONGODB_URI && MONGODB_URI.includes('/?')) {
-  MONGODB_URI = MONGODB_URI.replace('/?', '/paycam?');
-}
-console.log("MONGODB_URI:", MONGODB_URI);
+const MONGODB_URI = process.env.MONGODB_URI;
+console.log("MONGODB_URI setup:", MONGODB_URI ? "Provided" : "Not Provided");
 let useMockDb = true; // Set to true initially, will switch to false if MongoDB connects successfully
 
 // --- Mongoose Models ---
@@ -3910,7 +3907,10 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 async function startServer() {
   if (MONGODB_URI) {
     try {
-      await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
+      await mongoose.connect(MONGODB_URI, { 
+        serverSelectionTimeoutMS: 10000, // Increased timeout for SRV
+        dbName: 'paycam'
+      });
       console.log("Connected to MongoDB");
       useMockDb = false;
     } catch (err) {
