@@ -38,7 +38,8 @@ export default function AdminDashboard() {
       withdrawalFeeFixed: 50,
       withdrawalFeePercent: 1.0,
       merchantCommissionRate: 0,
-      agentCommissionRate: 0,
+      agentCashInCommissionRate: 0,
+      agentCashOutCommissionRate: 0,
       require2FASupport: true,
       geoBlocking: false
   });
@@ -1274,8 +1275,12 @@ export default function AdminDashboard() {
                                 <input type="number" step="0.01" value={systemSettings.merchantCommissionRate || 0} onChange={e => setSystemSettings({...systemSettings, merchantCommissionRate: e.target.value})} className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm text-black focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                              </div>
                              <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Agent Commission (%)</label>
-                                <input type="number" step="0.01" value={systemSettings.agentCommissionRate || 0} onChange={e => setSystemSettings({...systemSettings, agentCommissionRate: e.target.value})} className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm text-black focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Agent Cash-In Commission (%)</label>
+                                <input type="number" step="0.01" value={systemSettings.agentCashInCommissionRate || 0} onChange={e => setSystemSettings({...systemSettings, agentCashInCommissionRate: e.target.value})} className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm text-black focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                             </div>
+                             <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Agent Cash-Out Commission (%)</label>
+                                <input type="number" step="0.01" value={systemSettings.agentCashOutCommissionRate || 0} onChange={e => setSystemSettings({...systemSettings, agentCashOutCommissionRate: e.target.value})} className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm text-black focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                              </div>
                           </div>
                        </div>
@@ -1449,7 +1454,7 @@ export default function AdminDashboard() {
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Type</label>
                                     <div className="flex gap-2">
-                                      <select value={bankForm.type} onChange={(e) => setBankForm({...bankForm, type: e.target.value})} className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm bg-white">
+                                      <select value={bankForm.type} onChange={(e) => setBankForm({...bankForm, type: e.target.value})} className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm bg-white text-black">
                                           <option value="Bank">Bank Account</option>
                                           <option value="Float">Mobile Float</option>
                                       </select>

@@ -255,6 +255,12 @@ export default function AgentDashboard() {
             <Wallet size={16} /> Send Float
           </button>
           <button 
+            onClick={() => navigate('/statements')}
+            className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex items-center justify-center gap-2 text-gray-500 hover:bg-gray-50`}
+          >
+            <History size={16} /> History
+          </button>
+          <button 
             onClick={() => setActiveTab('analytics')}
             className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex items-center justify-center gap-2 ${activeTab === 'analytics' ? 'bg-[#1E1B4B] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}
           >

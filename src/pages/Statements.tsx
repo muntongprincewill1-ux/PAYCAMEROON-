@@ -93,6 +93,7 @@ export default function Statements() {
                       {Math.abs(tx.amount).toLocaleString()} 
                     </p>
                     {tx.fee > 0 && <p className="text-xs text-gray-400 dark:text-gray-500">Fee: {tx.fee}</p>}
+                    {tx.commissionRecord > 0 && <p className="text-xs text-green-500 font-medium">Commission: +{tx.commissionRecord}</p>}
                   </div>
                 </div>
               );

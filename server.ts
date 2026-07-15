@@ -287,11 +287,15 @@ function getAgentCommission(amount: number, type: 'cash_in' | 'cash_out', role?:
   if (role === 'merchant') {
     return Math.floor(amount * ((systemSettings.merchantCommissionRate || 0) / 100));
   } else if (role === 'agent') {
-    return Math.floor(amount * ((systemSettings.agentCommissionRate || 0) / 100));
+    if (type === 'cash_in') {
+      return Math.floor(amount * ((systemSettings.agentCashInCommissionRate || 0) / 100));
+    } else {
+      return Math.floor(amount * ((systemSettings.agentCashOutCommissionRate || 0) / 100));
+    }
   }
   
   // Fallback if role is not provided
-  return Math.floor(amount * ((systemSettings.agentCommissionRate || 0) / 100));
+  return Math.floor(amount * ((systemSettings.agentCashOutCommissionRate || 0) / 100));
 }
 
 // Helper to log audit events
@@ -2222,7 +2226,8 @@ const settingsSchema = new mongoose.Schema({
   geoBlocking: { type: Boolean, default: false },
   appLogoUrl: { type: String, default: "" },
   merchantCommissionRate: { type: Number, default: 0 },
-  agentCommissionRate: { type: Number, default: 0 },
+  agentCashInCommissionRate: { type: Number, default: 0 },
+  agentCashOutCommissionRate: { type: Number, default: 0 },
 });
 const Settings = mongoose.model("Settings", settingsSchema);
 
@@ -2317,7 +2322,8 @@ let systemSettings = {
     geoBlocking: false,
     appLogoUrl: "",
     merchantCommissionRate: 0,
-    agentCommissionRate: 0
+    agentCashInCommissionRate: 0,
+    agentCashOutCommissionRate: 0
 };
 
 app.get("/api/settings/public", (req, res) => {
@@ -2339,7 +2345,8 @@ app.post("/api/admin/settings", async (req, res) => {
             withdrawalFeeFixed: parseFloat(req.body.settings.withdrawalFeeFixed?.toString().replace('%', '') ?? systemSettings.withdrawalFeeFixed) || 0,
             withdrawalFeePercent: parseFloat(req.body.settings.withdrawalFeePercent?.toString().replace('%', '') ?? systemSettings.withdrawalFeePercent) || 0,
             merchantCommissionRate: parseFloat(req.body.settings.merchantCommissionRate?.toString().replace('%', '') ?? systemSettings.merchantCommissionRate) || 0,
-            agentCommissionRate: parseFloat(req.body.settings.agentCommissionRate?.toString().replace('%', '') ?? systemSettings.agentCommissionRate) || 0
+            agentCashInCommissionRate: parseFloat(req.body.settings.agentCashInCommissionRate?.toString().replace('%', '') ?? systemSettings.agentCashInCommissionRate) || 0,
+            agentCashOutCommissionRate: parseFloat(req.body.settings.agentCashOutCommissionRate?.toString().replace('%', '') ?? systemSettings.agentCashOutCommissionRate) || 0
         };
         
         if (!useMockDb) {
@@ -2400,39 +2407,87 @@ let treasuryTx: any[] = [
   { id: 'TRX2', date: new Date(Date.now() - 86400000 * 5), type: 'Fee Sweep', amount: 150000, bank: 'MockBank Inc.' }
 ];
 
-app.post("/api/finance/treasury/accounts", (req, res) => {
+app.post("/api/finance/treasury/accounts", async (req, res) => {
   if ((req as any).user?.role !== 'admin' && !req.headers.authorization) {
      // rudimentary check
   }
   const { name, type, accountNumber } = req.body;
-  const newAccount = {
-    id: (type === 'Bank' ? 'b' : 'f') + Date.now(),
-    name,
-    type,
-    accountNumber: accountNumber || '',
-    balance: 0,
-    status: 'Active'
-  };
-  bankAccountsData.push(newAccount);
-  res.json({ success: true, account: newAccount, bankAccounts: bankAccountsData });
-});
-
-app.put("/api/finance/treasury/accounts/:id", (req, res) => {
-  const { id } = req.params;
-  const { name, type, accountNumber } = req.body;
-  const index = bankAccountsData.findIndex(a => a.id === id);
-  if (index !== -1) {
-    bankAccountsData[index] = { ...bankAccountsData[index], name, type, accountNumber: accountNumber || '' };
-    res.json({ success: true, bankAccounts: bankAccountsData });
+  if (useMockDb) {
+    const newAccount = {
+      id: (type === 'Bank' ? 'b' : 'f') + Date.now(),
+      name,
+      type,
+      accountNumber: accountNumber || '',
+      balance: 0,
+      status: 'Active'
+    };
+    bankAccountsData.push(newAccount);
+    res.json({ success: true, account: newAccount, bankAccounts: bankAccountsData });
   } else {
-    res.status(404).json({ error: "Account not found" });
+    try {
+      const newAccount = new BankAccount({ name, type, accountNumber: accountNumber || '', balance: 0, status: 'Active' });
+      await newAccount.save();
+      const obj = newAccount.toObject() as any;
+      obj.id = obj._id.toString();
+      let bankAccounts = await BankAccount.find();
+      const mappedBankAccounts = bankAccounts.map(doc => {
+         const obj = doc.toObject() as any;
+         obj.id = obj._id.toString();
+         return obj;
+      });
+      res.json({ success: true, account: obj, bankAccounts: mappedBankAccounts });
+    } catch(error) {
+      res.status(500).json({ error: "Failed to create account" });
+    }
   }
 });
 
-app.delete("/api/finance/treasury/accounts/:id", (req, res) => {
+app.put("/api/finance/treasury/accounts/:id", async (req, res) => {
   const { id } = req.params;
-  bankAccountsData = bankAccountsData.filter(a => a.id !== id);
-  res.json({ success: true, bankAccounts: bankAccountsData });
+  const { name, type, accountNumber } = req.body;
+  if (useMockDb) {
+    const index = bankAccountsData.findIndex(a => a.id === id);
+    if (index !== -1) {
+      bankAccountsData[index] = { ...bankAccountsData[index], name, type, accountNumber: accountNumber || '' };
+      res.json({ success: true, bankAccounts: bankAccountsData });
+    } else {
+      res.status(404).json({ error: "Account not found" });
+    }
+  } else {
+    try {
+      await BankAccount.findByIdAndUpdate(id, { name, type, accountNumber: accountNumber || '' });
+      let bankAccounts = await BankAccount.find();
+      const mappedBankAccounts = bankAccounts.map(doc => {
+         const obj = doc.toObject() as any;
+         obj.id = obj._id.toString();
+         return obj;
+      });
+      res.json({ success: true, bankAccounts: mappedBankAccounts });
+    } catch(error) {
+      res.status(500).json({ error: "Failed to update account" });
+    }
+  }
+});
+
+app.delete("/api/finance/treasury/accounts/:id", async (req, res) => {
+  const { id } = req.params;
+  if (useMockDb) {
+    bankAccountsData = bankAccountsData.filter(a => a.id !== id);
+    res.json({ success: true, bankAccounts: bankAccountsData });
+  } else {
+    try {
+      await BankAccount.findByIdAndDelete(id);
+      let bankAccounts = await BankAccount.find();
+      const mappedBankAccounts = bankAccounts.map(doc => {
+         const obj = doc.toObject() as any;
+         obj.id = obj._id.toString();
+         return obj;
+      });
+      res.json({ success: true, bankAccounts: mappedBankAccounts });
+    } catch(error) {
+      res.status(500).json({ error: "Failed to delete account" });
+    }
+  }
 });
 
 app.get("/api/finance/treasury", async (req, res) => {
@@ -2458,11 +2513,16 @@ app.get("/api/finance/treasury", async (req, res) => {
           internalWallets: internalWalletsData
       });
     } else {
-      const bankAccounts = await BankAccount.find();
+      let bankAccounts = await BankAccount.find();
+      const mappedBankAccounts = bankAccounts.map(doc => {
+         const obj = doc.toObject() as any;
+         obj.id = obj._id.toString();
+         return obj;
+      });
       const internalWallets = await mongoose.models.InternalWallet.find();
       const transactions = await TreasuryTx.find().sort({ createdAt: -1 }).limit(100);
       const balance = internalWallets.reduce((acc, w) => acc + (w.balance || 0), 0);
-      res.json({ balance, transactions, bankAccounts, internalWallets });
+      res.json({ balance, transactions, bankAccounts: mappedBankAccounts, internalWallets });
     }
   } catch(error) { res.status(500).json({error: "Failed to load treasury"}); }
 });
@@ -2854,7 +2914,8 @@ app.get("/api/admin/approvals", async (req, res) => {
         if (useMockDb) {
             approvalsList = pendingAdminApprovals.filter(a => a.status === 'pending');
         } else {
-            approvalsList = await AdminApproval.find({ status: 'pending' });
+            const approvals = await AdminApproval.find({ status: 'pending' });
+            approvalsList = approvals.map(a => ({ ...a.toObject(), id: a._id.toString() }));
         }
         res.json({ approvals: approvalsList });
     } catch (err) {
